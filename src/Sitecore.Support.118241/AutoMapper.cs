@@ -1,65 +1,70 @@
-﻿using Sitecore.Form.Core.Utility;
+﻿using Sitecore.Data.Items;
+using Sitecore.Diagnostics;
+using Sitecore.Form.Core.Utility;
 using Sitecore.Forms.Core.Data;
 using Sitecore.Forms.Mvc.Helpers;
 using Sitecore.Forms.Mvc.Interfaces;
-using Sitecore.Forms.Mvc.Models;
 using Sitecore.Forms.Mvc.Reflection;
 using Sitecore.Forms.Mvc.ViewModels;
 using Sitecore.Mvc.Extensions;
+using Sitecore.WFFM.Abstractions.Actions;
 using Sitecore.WFFM.Abstractions.Data;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 
 namespace Sitecore.Support.Forms.Mvc.Services
 {
-    public class AutoMapper : IAutoMapper<FormModel, FormViewModel>
+    public class AutoMapper : IAutoMapper<IFormModel, FormViewModel>
     {
-        public FormViewModel GetView(FormModel modelEntity)
+        public FormViewModel GetView(IFormModel formModel)
         {
-            Sitecore.Diagnostics.Assert.ArgumentNotNull(modelEntity, "modelEntity");
-            FormViewModel formViewModel = new FormViewModel();
-            formViewModel.UniqueId = modelEntity.UniqueId;
-            formViewModel.Information = (modelEntity.Item.Introduction ?? string.Empty);
-            formViewModel.IsAjaxForm = modelEntity.Item.IsAjaxMvcForm;
-            formViewModel.IsSaveFormDataToStorage = modelEntity.Item.IsSaveFormDataToStorage;
-            formViewModel.Title = (modelEntity.Item.FormName ?? string.Empty);
-            formViewModel.TitleTag = modelEntity.Item.TitleTag.ToString();
-            formViewModel.ShowTitle = modelEntity.Item.ShowTitle;
-            formViewModel.ShowFooter = modelEntity.Item.ShowFooter;
-            formViewModel.ShowInformation = modelEntity.Item.ShowIntroduction;
-            formViewModel.SubmitButtonName = (modelEntity.Item.SubmitName ?? string.Empty);
-            formViewModel.SubmitButtonPosition = (modelEntity.Item.SubmitButtonPosition ?? string.Empty);
-            formViewModel.SubmitButtonSize = (modelEntity.Item.SubmitButtonSize ?? string.Empty);
-            formViewModel.SubmitButtonType = (modelEntity.Item.SubmitButtonType ?? string.Empty);
-            formViewModel.SuccessMessage = (modelEntity.Item.SuccessMessage ?? string.Empty);
-            formViewModel.SuccessSubmit = false;
-            formViewModel.Errors = (from x in modelEntity.Failures
-                                    select x.ErrorMessage).ToList<string>();
-            formViewModel.RedirectUrl = modelEntity.SuccessRedirectUrl;
-            formViewModel.Visible = true;
-            formViewModel.LeftColumnStyle = modelEntity.Item.LeftColumnStyle;
-            formViewModel.RightColumnStyle = modelEntity.Item.RightColumnStyle;
-            formViewModel.Footer = modelEntity.Item.Footer;
-            formViewModel.Item = modelEntity.Item.InnerItem;
-            formViewModel.FormType = modelEntity.Item.FormType;
-            formViewModel.ReadQueryString = modelEntity.ReadQueryString;
-            formViewModel.QueryParameters = modelEntity.QueryParameters;
-            StringBuilder stringBuilder = new StringBuilder();
-            stringBuilder.Append(modelEntity.Item.FormTypeClass ?? string.Empty).Append(" ").Append(modelEntity.Item.CustomCss ?? string.Empty).Append(" ").Append(modelEntity.Item.FormAlignment ?? string.Empty);
-            formViewModel.CssClass = stringBuilder.ToString().Trim();
-            ReflectionUtils.SetXmlProperties(formViewModel, modelEntity.Item.Parameters, true);
-            formViewModel.Sections = (from x in modelEntity.Item.SectionItems
-                                      select this.GetSectionViewModel(new SectionItem(x), formViewModel) into x
-                                      where x != null
-                                      select x).ToList<SectionViewModel>();
+            Assert.ArgumentNotNull((object)formModel, "formModel");
+            FormViewModel formViewModel = new FormViewModel()
+            {
+                UniqueId = formModel.UniqueId,
+                Information = formModel.Item.Introduction ?? string.Empty,
+                IsAjaxForm = formModel.Item.IsAjaxMvcForm,
+                IsSaveFormDataToStorage = formModel.Item.IsSaveFormDataToStorage,
+                Title = formModel.Item.FormName ?? string.Empty,
+                Name = formModel.Item.FormName ?? string.Empty,
+                TitleTag = formModel.Item.TitleTag.ToString(),
+                ShowTitle = formModel.Item.ShowTitle,
+                ShowFooter = formModel.Item.ShowFooter,
+                ShowInformation = formModel.Item.ShowIntroduction,
+                SubmitButtonName = formModel.Item.SubmitName ?? string.Empty,
+                SubmitButtonPosition = formModel.Item.SubmitButtonPosition ?? string.Empty,
+                SubmitButtonSize = formModel.Item.SubmitButtonSize ?? string.Empty,
+                SubmitButtonType = formModel.Item.SubmitButtonType ?? string.Empty,
+                SuccessMessage = formModel.Item.SuccessMessage ?? string.Empty,
+                SuccessSubmit = false,
+                Errors = formModel.Failures.Select<ExecuteResult.Failure, string>((Func<ExecuteResult.Failure, string>)(x => x.ErrorMessage)).ToList<string>(),
+                Visible = true,
+                LeftColumnStyle = formModel.Item.LeftColumnStyle,
+                RightColumnStyle = formModel.Item.RightColumnStyle,
+                Footer = formModel.Item.Footer,
+                Item = formModel.Item.InnerItem,
+                FormType = formModel.Item.FormType,
+                ReadQueryString = formModel.ReadQueryString,
+                QueryParameters = formModel.QueryParameters
+            };
+            formViewModel.CssClass = ((formModel.Item.FormTypeClass ?? string.Empty) + " " + (formModel.Item.CustomCss ?? string.Empty) + " " + (formModel.Item.FormAlignment ?? string.Empty)).Trim();
+            ReflectionUtils.SetXmlProperties((object)formViewModel, formModel.Item.Parameters, true);
+            formViewModel.Sections = ((IEnumerable<Item>)formModel.Item.SectionItems).Select<Item, SectionViewModel>((Func<Item, SectionViewModel>)(x => this.GetSectionViewModel(new SectionItem(x), formViewModel))).Where<SectionViewModel>((Func<SectionViewModel, bool>)(x => x != null)).ToList<SectionViewModel>();
             return formViewModel;
         }
 
-        public void SetModelResults(FormViewModel view, FormModel formModel)
+        public void SetModelResults(FormViewModel view, IFormModel formModel)
         {
+            //Assert.ArgumentNotNull((object)view, "view");
+            //Assert.ArgumentNotNull((object)formModel, "formModel");
+            //formModel.Results = view.Sections.SelectMany<SectionViewModel, FieldViewModel>((Func<SectionViewModel, IEnumerable<FieldViewModel>>)(x => (IEnumerable<FieldViewModel>)x.Fields)).Select<FieldViewModel, ControlResult>((Func<FieldViewModel, ControlResult>)(x => ((IFieldResult)x).GetResult())).Where<ControlResult>((Func<ControlResult, bool>)(x =>
+            //{
+            //    if (x != null)
+            //        return x.Value != null;
+            //    return false;
+            //})).ToList<ControlResult>();
             Sitecore.Diagnostics.Assert.ArgumentNotNull(view, "view");
             Sitecore.Diagnostics.Assert.ArgumentNotNull(formModel, "formModel");
 
@@ -87,69 +92,59 @@ namespace Sitecore.Support.Forms.Mvc.Services
 
         protected SectionViewModel GetSectionViewModel(SectionItem item, FormViewModel formViewModel)
         {
-            Sitecore.Diagnostics.Assert.ArgumentNotNull(item, "item");
-            Sitecore.Diagnostics.Assert.ArgumentNotNull(formViewModel, "formViewModel");
-            SectionViewModel sectionViewModel = new SectionViewModel();
-            sectionViewModel.Fields = new List<FieldViewModel>();
-            sectionViewModel.Item = item.InnerItem;
+            Assert.ArgumentNotNull((object)item, "item");
+            Assert.ArgumentNotNull((object)formViewModel, "formViewModel");
+            SectionViewModel sectionViewModel = new SectionViewModel()
+            {
+                Fields = new List<FieldViewModel>(),
+                Item = item.InnerItem
+            };
             string title = item.Title;
             sectionViewModel.Visible = true;
             if (!string.IsNullOrEmpty(title))
             {
                 sectionViewModel.ShowInformation = true;
-                sectionViewModel.Title = (item.Title ?? string.Empty);
-                ReflectionUtils.SetXmlProperties(sectionViewModel, item.Parameters, true);
-                sectionViewModel.ShowTitle = (sectionViewModel.ShowLegend != "No");
-                ReflectionUtils.SetXmlProperties(sectionViewModel, item.LocalizedParameters, true);
+                sectionViewModel.Title = item.Title ?? string.Empty;
+                ReflectionUtils.SetXmlProperties((object)sectionViewModel, item.Parameters, true);
+                sectionViewModel.ShowTitle = sectionViewModel.ShowLegend != "No";
+                ReflectionUtils.SetXmlProperties((object)sectionViewModel, item.LocalizedParameters, true);
             }
-            sectionViewModel.Fields = (from x in item.Fields
-                                       select this.GetFieldViewModel(x, formViewModel) into x
-                                       where x != null
-                                       select x).ToList<FieldViewModel>();
+            sectionViewModel.Fields = ((IEnumerable<FieldItem>)item.Fields).Select<FieldItem, FieldViewModel>((Func<FieldItem, FieldViewModel>)(x => this.GetFieldViewModel((IFieldItem)x, formViewModel))).Where<FieldViewModel>((Func<FieldViewModel, bool>)(x => x != null)).ToList<FieldViewModel>();
             if (!string.IsNullOrEmpty(item.Conditions))
-            {
-                RulesManager.RunRules(item.Conditions, sectionViewModel);
-            }
+                RulesManager.RunRules(item.Conditions, (object)sectionViewModel);
             if (sectionViewModel.Visible)
-            {
                 return sectionViewModel;
-            }
-            return null;
+            return (SectionViewModel)null;
         }
 
         protected FieldViewModel GetFieldViewModel(IFieldItem item, FormViewModel formViewModel)
         {
-            Sitecore.Diagnostics.Assert.ArgumentNotNull(item, "item");
-            Sitecore.Diagnostics.Assert.ArgumentNotNull(formViewModel, "formViewModel");
-            string mVCClass = item.MVCClass;
-            if (string.IsNullOrEmpty(mVCClass))
-            {
-                return new FieldViewModel
+            Assert.ArgumentNotNull((object)item, "item");
+            Assert.ArgumentNotNull((object)formViewModel, "formViewModel");
+            string mvcClass = item.MVCClass;
+            if (string.IsNullOrEmpty(mvcClass))
+                return new FieldViewModel()
                 {
                     Item = item.InnerItem
                 };
-            }
-            Type type = Type.GetType(mVCClass);
-            if (type == null)
-            {
-                return new FieldViewModel
+            Type type = Type.GetType(mvcClass);
+            if (type == (Type)null)
+                return new FieldViewModel()
                 {
                     Item = item.InnerItem
                 };
-            }
-            object obj = Activator.CreateInstance(type);
-            FieldViewModel fieldViewModel = obj as FieldViewModel;
+            object instance = Activator.CreateInstance(type);
+            FieldViewModel fieldViewModel = instance as FieldViewModel;
             if (fieldViewModel == null)
             {
-                Sitecore.Diagnostics.Log.Warn(string.Format("[WFFM]Unable to create instance of type {0}", mVCClass), this);
-                return null;
+                Log.Warn(string.Format("[WFFM]Unable to create instance of type {0}", (object)mvcClass), (object)this);
+                return (FieldViewModel)null;
             }
-            fieldViewModel.Title = (item.Title ?? string.Empty);
+            fieldViewModel.Title = item.Title ?? string.Empty;
+            fieldViewModel.Name = item.Name ?? string.Empty;
             fieldViewModel.Visible = true;
             if (fieldViewModel != null)
-            {
-                ((IHasIsRequired)fieldViewModel).IsRequired = item.IsRequired;
-            }
+                fieldViewModel.IsRequired = item.IsRequired;
             fieldViewModel.ShowTitle = true;
             fieldViewModel.Item = item.InnerItem;
             fieldViewModel.FormId = formViewModel.Item.ID.ToString();
@@ -159,30 +154,24 @@ namespace Sitecore.Support.Forms.Mvc.Services
             fieldViewModel.RightColumnStyle = formViewModel.RightColumnStyle;
             fieldViewModel.ShowInformation = true;
             Dictionary<string, string> parametersDictionary = item.ParametersDictionary;
-            parametersDictionary.AddRange(item.LocalizedParametersDictionary);
+            parametersDictionary.AddRange<string, string>(item.LocalizedParametersDictionary);
             fieldViewModel.Parameters = parametersDictionary;
-            ReflectionUtil.SetXmlProperties(obj, item.ParametersDictionary);
-            ReflectionUtil.SetXmlProperties(obj, item.LocalizedParametersDictionary);
-            fieldViewModel.Parameters.AddRange(item.MvcValidationMessages);
-            if (!string.IsNullOrEmpty(item.Conditions))
-            {
-                RulesManager.RunRules(item.Conditions, fieldViewModel);
-            }
+            ReflectionUtil.SetXmlProperties(instance, item.ParametersDictionary);
+            ReflectionUtil.SetXmlProperties(instance, item.LocalizedParametersDictionary);
+            fieldViewModel.Parameters.AddRange<string, string>(item.MvcValidationMessages);
             if (!fieldViewModel.Visible)
-            {
-                return null;
-            }
+                return (FieldViewModel)null;
             fieldViewModel.Initialize();
+            if (!string.IsNullOrEmpty(item.Conditions))
+                RulesManager.RunRules(item.Conditions, (object)fieldViewModel);
             if (formViewModel.ReadQueryString && formViewModel.QueryParameters != null && !string.IsNullOrEmpty(formViewModel.QueryParameters[fieldViewModel.Title]))
             {
                 MethodInfo method = fieldViewModel.GetType().GetMethod("SetValueFromQuery");
-                if (method != null)
-                {
-                    method.Invoke(fieldViewModel, new object[]
+                if (method != (MethodInfo)null)
+                    method.Invoke((object)fieldViewModel, new object[1]
                     {
-                        formViewModel.QueryParameters[fieldViewModel.Title]
+            (object) formViewModel.QueryParameters[fieldViewModel.Title]
                     });
-                }
             }
             return fieldViewModel;
         }
