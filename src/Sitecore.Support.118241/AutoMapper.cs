@@ -57,37 +57,20 @@ namespace Sitecore.Support.Forms.Mvc.Services
 
         public void SetModelResults(FormViewModel view, IFormModel formModel)
         {
-            //Assert.ArgumentNotNull((object)view, "view");
-            //Assert.ArgumentNotNull((object)formModel, "formModel");
-            //formModel.Results = view.Sections.SelectMany<SectionViewModel, FieldViewModel>((Func<SectionViewModel, IEnumerable<FieldViewModel>>)(x => (IEnumerable<FieldViewModel>)x.Fields)).Select<FieldViewModel, ControlResult>((Func<FieldViewModel, ControlResult>)(x => ((IFieldResult)x).GetResult())).Where<ControlResult>((Func<ControlResult, bool>)(x =>
-            //{
-            //    if (x != null)
-            //        return x.Value != null;
-            //    return false;
-            //})).ToList<ControlResult>();
-            Sitecore.Diagnostics.Assert.ArgumentNotNull(view, "view");
-            Sitecore.Diagnostics.Assert.ArgumentNotNull(formModel, "formModel");
-
-            foreach (var section in view.Sections)
+            Assert.ArgumentNotNull((object)view, "view");
+            Assert.ArgumentNotNull((object)formModel, "formModel");
+            formModel.Results = view.Sections.SelectMany((x => x.Fields)).Select(x => ((IFieldResult)x).GetResult()).Where((x =>
             {
-                foreach (var field in section.Fields)
-                {
-                    formModel.Results.Add(((IFieldResult)field).GetResult());
-                }
-            }
-
-            var results = view.Sections.SelectMany(x => x.Fields).Select(x => ((IFieldResult)x).GetResult()).Where(x => x != null);
-            foreach (var result in results)
-            {
-                if (result.Value == null) result.Value = string.Empty;
-            }
-
-            formModel.Results = results.ToList();
+                if (x != null)
+                    return x.Value != null;
+                return false;
+            })).ToList();
 
             foreach (var formModelResult in formModel.Results)
             {
                 if (formModelResult.Value == null) formModelResult.Value = string.Empty;
             }
+            
         }
 
         protected SectionViewModel GetSectionViewModel(SectionItem item, FormViewModel formViewModel)
@@ -112,8 +95,10 @@ namespace Sitecore.Support.Forms.Mvc.Services
             sectionViewModel.Fields = ((IEnumerable<FieldItem>)item.Fields).Select<FieldItem, FieldViewModel>((Func<FieldItem, FieldViewModel>)(x => this.GetFieldViewModel((IFieldItem)x, formViewModel))).Where<FieldViewModel>((Func<FieldViewModel, bool>)(x => x != null)).ToList<FieldViewModel>();
             if (!string.IsNullOrEmpty(item.Conditions))
                 RulesManager.RunRules(item.Conditions, (object)sectionViewModel);
+
             if (sectionViewModel.Visible)
                 return sectionViewModel;
+
             return (SectionViewModel)null;
         }
 
