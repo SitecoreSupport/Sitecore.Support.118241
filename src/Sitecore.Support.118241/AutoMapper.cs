@@ -63,29 +63,17 @@ namespace Sitecore.Support.Forms.Mvc.Services
             Sitecore.Diagnostics.Assert.ArgumentNotNull(view, "view");
             Sitecore.Diagnostics.Assert.ArgumentNotNull(formModel, "formModel");
 
-            foreach (var section in view.Sections)
-            {
-                foreach (var field in section.Fields)
-                {
-                    formModel.Results.Add(((IFieldResult)field).GetResult());
-                }
-            }
+            var results = view.Sections.SelectMany(x => x.Fields).Select(x => ((IFieldResult)x).GetResult()).Where(x => x != null).ToList();
 
-            var results = view.Sections.SelectMany(x => x.Fields).Select(x => ((IFieldResult)x).GetResult()).Where(x => x != null);
             foreach (var result in results)
             {
                 if (result.Value == null) result.Value = string.Empty;
             }
 
-            formModel.Results = results.ToList();
-
-            foreach (var formModelResult in formModel.Results)
-            {
-                if (formModelResult.Value == null) formModelResult.Value = string.Empty;
-            }
+            formModel.Results = results;
         }
 
-        protected SectionViewModel GetSectionViewModel(SectionItem item, FormViewModel formViewModel)
+        protected SectionViewModel GetSectionViewModel([NotNull] SectionItem item, FormViewModel formViewModel)
         {
             Sitecore.Diagnostics.Assert.ArgumentNotNull(item, "item");
             Sitecore.Diagnostics.Assert.ArgumentNotNull(formViewModel, "formViewModel");
@@ -117,7 +105,8 @@ namespace Sitecore.Support.Forms.Mvc.Services
             return null;
         }
 
-        protected FieldViewModel GetFieldViewModel(IFieldItem item, FormViewModel formViewModel)
+        [CanBeNull]
+        protected FieldViewModel GetFieldViewModel([NotNull] IFieldItem item, FormViewModel formViewModel)
         {
             Sitecore.Diagnostics.Assert.ArgumentNotNull(item, "item");
             Sitecore.Diagnostics.Assert.ArgumentNotNull(formViewModel, "formViewModel");
